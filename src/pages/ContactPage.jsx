@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Phone, Mail, Send, Calendar } from 'lucide-react';
@@ -16,7 +15,7 @@ const ContactPage = () => {
     phone: '',
     eventDate: '',
     eventType: '',
-    venue: '',
+    venueLocation: '',  // Changed from 'venue' to 'venueLocation'
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,35 +25,52 @@ const ContactPage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // const handleSubmit = (e) => {
-  //   e.preventDefault();
-  //   setIsSubmitting(true);
-    
-  //   // Simulate form submission
-  //   setTimeout(() => {
-  //     setIsSubmitting(false);
-  //     toast({
-  //       title: "Inquiry Sent!",
-  //       description: "We've received your message and will get back to you soon.",
-  //     });
-      
-  //     // Reset form
-  //     setFormData({
-  //       name: '',
-  //       email: '',
-  //       phone: '',
-  //       eventDate: '',
-  //       eventType: '',
-  //       venue: '',
-  //       message: ''
-  //     });
-  //   }, 1500);
-  // };
-
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+
+    // Validate phone number format (Indian 10-digit)
+    const phoneRegex = /^[6-9]\d{9}$/;
+    const cleanedPhone = formData.phone.replace(/[\s\-\(\)\+]/g, '');
+    
+    if (!phoneRegex.test(cleanedPhone)) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid 10-digit Indian mobile number",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // ✅ Add email validation here
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(formData.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // ✅ Add future date validation (if eventDate is provided)
+    if (formData.eventDate) {
+      const selectedDate = new Date(formData.eventDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Compare only date, not time
+      
+      if (selectedDate < today) {
+        toast({
+          title: "Invalid Event Date",
+          description: "Event date cannot be in the past. Please select a future date.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     try {
       const response = await fetch("http://127.0.0.1:8000/contact", {
@@ -62,38 +78,53 @@ const ContactPage = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.toLowerCase().trim(),
+          phone: cleanedPhone,
+          eventType: formData.eventType,
+          venueLocation: formData.venueLocation.trim(),
+          message: formData.message.trim(),
+          eventDate: formData.eventDate || null,
+        }),
       });
 
       const data = await response.json();
 
-      toast({
-        title: "Inquiry Sent!",
-        description: data.message,  // backend ka response show hoga
-      });
+      if (response.ok) {
+        toast({
+          title: "Inquiry Sent!",
+          description: data.message,
+        });
 
-      // Reset form
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        eventDate: '',
-        eventType: '',
-        venue: '',
-        message: ''
-      });
+        // Reset form
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          eventDate: '',
+          eventType: '',
+          venueLocation: '',  // Changed from 'venue'
+          message: ''
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data.detail || "Something went wrong",
+          variant: "destructive",
+        });
+      }
 
     } catch (error) {
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: "Network error. Please check if backend is running.",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-
 
   const fadeIn = {
     initial: { opacity: 0, y: 20 },
@@ -172,7 +203,7 @@ const ContactPage = () => {
               className="rounded-lg overflow-hidden h-64 mt-8"
               variants={fadeIn}
             >
-              <img  className="w-full h-full object-cover" alt="Office location" src="https://images.unsplash.com/photo-1641236210747-48bc43e4517f" />
+              <img className="w-full h-full object-cover" alt="Office location" src="https://images.unsplash.com/photo-1641236210747-48bc43e4517f" />
             </motion.div>
           </motion.div>
 
@@ -187,7 +218,7 @@ const ContactPage = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Your Name *</Label>
+                  <Label htmlFor="name">Your Name <span className="text-red-500">*</span></Label>
                   <Input 
                     id="name" 
                     name="name" 
@@ -199,7 +230,7 @@ const ContactPage = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email Address *</Label>
+                  <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
                   <Input 
                     id="email" 
                     name="email" 
@@ -212,7 +243,7 @@ const ContactPage = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number *</Label>
+                  <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
                   <Input 
                     id="phone" 
                     name="phone" 
@@ -221,6 +252,28 @@ const ContactPage = () => {
                     placeholder="Enter your phone number" 
                     required 
                   />
+                  <p className="text-xs text-muted-foreground">Enter 10-digit Indian mobile number</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="eventType">Event Type <span className="text-red-500">*</span></Label>
+                  <select
+                    id="eventType"
+                    name="eventType"
+                    value={formData.eventType}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  >
+                    <option value="">Select Event Type</option>
+                    <option value="Wedding">Wedding</option>
+                    <option value="Engagement">Engagement</option>
+                    <option value="Pre-wedding">Pre-wedding</option>
+                    <option value="Reception">Reception</option>
+                    <option value="Birthday">Birthday</option>
+                    <option value="Corporate">Corporate</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
                 
                 <div className="space-y-2">
@@ -235,30 +288,20 @@ const ContactPage = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="eventType">Event Type</Label>
+                  <Label htmlFor="venueLocation">Venue Location <span className="text-red-500">*</span></Label>
                   <Input 
-                    id="eventType" 
-                    name="eventType" 
-                    value={formData.eventType} 
-                    onChange={handleChange} 
-                    placeholder="Wedding, Engagement, etc." 
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="venue">Venue Location</Label>
-                  <Input 
-                    id="venue" 
-                    name="venue" 
-                    value={formData.venue} 
+                    id="venueLocation" 
+                    name="venueLocation" 
+                    value={formData.venueLocation} 
                     onChange={handleChange} 
                     placeholder="City, State" 
+                    required 
                   />
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="message">Your Message *</Label>
+                <Label htmlFor="message">Your Message <span className="text-red-500">*</span></Label>
                 <Textarea 
                   id="message" 
                   name="message" 

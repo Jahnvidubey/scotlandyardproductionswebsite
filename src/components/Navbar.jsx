@@ -10,7 +10,12 @@ const Navbar = () => {
   const location = useLocation();
 
   const logoUrl = "/images/logo.png";
+  const scrolledLogo = "/images/logo-scrolled.png";
   const currentPath = location.pathname;
+
+  const getLogoUrl = () => {
+    return (scrolled || currentPath !== '/') ? scrolledLogo : logoUrl;
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -45,7 +50,16 @@ const Navbar = () => {
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-3">
-            <img src={logoUrl} alt="Logo" className="h-20 w-auto" />
+            {/* <img src={logoUrl} alt="Logo" className="h-20 w-auto" /> */}
+            <motion.img 
+              key={getLogoUrl()}
+              src={getLogoUrl()} 
+              alt="Logo" 
+              className="h-20 w-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+            />
           </Link>
 
           {/* Desktop Navigation */}
