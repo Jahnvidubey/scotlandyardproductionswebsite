@@ -24,3 +24,6 @@ env/
 # IDE
 .vscode/
 .idea/
+
+# Or if you want to ignore entire public folder
+public/
